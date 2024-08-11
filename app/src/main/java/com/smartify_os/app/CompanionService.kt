@@ -95,6 +95,7 @@ class CompanionService: CompanionDeviceService() {
                         3, R.drawable.ic_launcher_foreground
                     )
                     connected = false
+                    EventBus.post("DEVICE_DISCONNECTED:${device.address}")
                     // Reconnect if necessary
                 }
             }
@@ -139,9 +140,11 @@ class CompanionService: CompanionDeviceService() {
 
             override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
                 val receivedData = characteristic.value
-                val message = String(receivedData)
+                var message = String(receivedData)
+                message = message.trim()
                 // Process the received message
                 Log.d("BLE", "Received message: $message")
+                EventBus.post("MESSAGE_RECEIVED:$message")
             }
         })
     }
