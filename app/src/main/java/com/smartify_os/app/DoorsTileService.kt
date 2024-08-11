@@ -15,8 +15,15 @@ class DoorsTileService : TileService() {
         if (event.startsWith("DEVICE_APPEARED:")) {
             val address = event.substringAfter(":")
             qsTile.label = "Loading..."
-            qsTile.state = Tile.STATE_INACTIVE
+            qsTile.state = Tile.STATE_UNAVAILABLE
             qsTile.subtitle = "Connecting ($address)"
+            qsTile.updateTile()
+        }
+        else if (event.startsWith("DEVICE_CONNECTED:")) {
+            val address = event.substringAfter(":")
+            qsTile.label = "Loading..."
+            qsTile.state = Tile.STATE_INACTIVE
+            qsTile.subtitle = "Connected"
             qsTile.updateTile()
         }
     }
@@ -43,7 +50,9 @@ class DoorsTileService : TileService() {
 
     override fun onStartListening() {
         super.onStartListening()
-
+        if(CompanionService.connected){
+            return;
+        }
         qsTile.label = "State Unknown"
         qsTile.subtitle = "Not connected"
         qsTile.state = Tile.STATE_UNAVAILABLE
@@ -61,6 +70,7 @@ class DoorsTileService : TileService() {
 
         // Example: Toggle the tile state
         qsTile.state = if (qsTile.state == Tile.STATE_ACTIVE) Tile.STATE_INACTIVE else Tile.STATE_ACTIVE
+        EventBus.post("SEND_MESSAGE:Hello world!\n")
         qsTile.updateTile()
     }
 
