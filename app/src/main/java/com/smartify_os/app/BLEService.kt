@@ -41,8 +41,8 @@ class BLEService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i("MyTag", "Staring BT service")
         Toast.makeText(this@BLEService, "Staring BT service", Toast.LENGTH_SHORT).show()
-        startForeground(1, createNotification())
-        startScanning()
+        //startForeground(1, createNotification())
+        //startScanning()
         return START_STICKY
     }
 
@@ -60,6 +60,10 @@ class BLEService : Service() {
             .build()
     }
 
+    private  fun observingDevicePresence(){
+
+    }
+
     private fun startScanning() {
 
         NotificationHelper.createNotificationChannel(this@BLEService, "system", "System Notifications",
@@ -67,21 +71,6 @@ class BLEService : Service() {
         NotificationHelper.sendNotification(this@BLEService, "system", "Started Scanning", "Started scanning for BLE devices...",
             1, R.drawable.ic_launcher_foreground)
 
-        /*val builder = NotificationCompat.Builder(this, "start_id")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Started Scanning")
-            .setContentText("Started searching for BLE")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-        val nManager = NotificationManagerCompat.from(this)
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        nManager.notify(1, builder.build())*/
 
         bluetoothLeScanner = (getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter.bluetoothLeScanner
         val leScanCallback = object : ScanCallback() {

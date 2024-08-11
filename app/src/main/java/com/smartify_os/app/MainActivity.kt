@@ -1,6 +1,8 @@
 package com.smartify_os.app
 
 import android.Manifest
+import android.app.Activity
+import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
@@ -9,10 +11,21 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.companion.AssociationInfo
+import android.companion.AssociationRequest
+import android.companion.BluetoothDeviceFilter
+import android.companion.CompanionDeviceManager
+import android.companion.DeviceFilter
+import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.MacAddress
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,12 +39,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import com.smartify_os.app.ui.theme.SmartifyOSAppTheme
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
+import java.util.UUID
+import java.util.concurrent.Executor
+import java.util.regex.Pattern
 
 //TODO: Scan only while in app, save mac, try to connect to saved mac every sec or use some
 //  system event
 class MainActivity : ComponentActivity() {
 
     private lateinit var bluetoothAdapter: BluetoothAdapter
+    private lateinit var sharedPreferences: SharedPreferences
+    //private lateinit var deviceManager: CompanionDeviceManager
+
+    private val deviceManager: CompanionDeviceManager by lazy {
+        getSystemService(Context.COMPANION_DEVICE_SERVICE) as CompanionDeviceManager
+    }
+
+    private val executor: Executor =  Executor { it.run() }
+
+    private var bluetoothGatt: BluetoothGatt? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,9 +73,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        sharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
         // Initialize Bluetooth
-        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
+        //val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
+        //bluetoothAdapter = bluetoothManager.adapter
 
         Log.i("MyTag", "Requesting permissions")
         // Request necessary permissions
@@ -57,14 +86,14 @@ class MainActivity : ComponentActivity() {
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT
+                Manifest.permission.BLUETOOTH_CONNECT,
             ),
             1001
         )
         Log.i("MyTag", "Staring Scan")
         // Start scanning for BLE devices
         //startScanning()
-
+        /*
         try {
 
             val serviceIntent = Intent(this, BLEService::class.java)
@@ -74,9 +103,195 @@ class MainActivity : ComponentActivity() {
         catch (e: Exception)
         {
             Log.e("MyTag", e.message.toString())
+        }*/
+        if (!isDeviceAssociated()) {
+            associateBle()
+        } else {
+            // Device is already associated, handle accordingly
         }
 
+    }
 
+    private fun associateBle()
+    {
+        NotificationHelper.createNotificationChannel(this@MainActivity, "system", "System Notifications",
+            "System Notifications", NotificationManager.IMPORTANCE_LOW)
+        NotificationHelper.sendNotification(this@MainActivity, "system", "Started association", "Started scanning for BLE devices...",
+            1, R.drawable.ic_launcher_foreground)
+
+        val deviceFilter: BluetoothDeviceFilter = BluetoothDeviceFilter.Builder()
+            // Match only Bluetooth devices whose name matches the pattern.
+            .setNamePattern(Pattern.compile("DSD TECH"))
+            .build()
+
+        val pairingRequest: AssociationRequest = AssociationRequest.Builder()
+            // Find only devices that match this request filter.
+            .addDeviceFilter(deviceFilter)
+            // Stop scanning as soon as one device matching the filter is found.
+            .setSingleDevice(true)
+            .build()
+
+        deviceManager.associate(pairingRequest,
+            executor,
+            object : CompanionDeviceManager.Callback() {
+                // Called when a device is found. Launch the IntentSender so the user
+                // can select the device they want to pair with.
+                override fun onAssociationPending(intentSender: IntentSender) {
+                    NotificationHelper.sendNotification(this@MainActivity, "system", "Association Pending", "Association Pending...",
+                        1, R.drawable.ic_launcher_foreground)
+
+                    startIntentSenderForResult(intentSender, 0, null, 0, 0, 0)
+                }
+
+                override fun onAssociationCreated(associationInfo: AssociationInfo) {
+                    // An association is created.
+                    val associationId: Int = associationInfo.id
+                    val macAddress: MacAddress? = associationInfo.deviceMacAddress
+                    saveAssociationInfo(macAddress)
+                    NotificationHelper.sendNotification(this@MainActivity, "system", "Successfully associated ($associationId)", "Successfully associated with $macAddress",
+                        1, R.drawable.ic_launcher_foreground)
+                }
+
+                override fun onFailure(errorMessage: CharSequence?) {
+                    // To handle the failure.
+                    NotificationHelper.sendNotification(this@MainActivity, "system", "Association failed", "Failed ($errorMessage)",
+                        1, R.drawable.ic_launcher_foreground)
+                }
+
+            })
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        when (requestCode) {
+            0 -> when(resultCode) {
+                Activity.RESULT_OK -> {
+                    // The user chose to pair the app with a Bluetooth device.
+                    val deviceToPair: BluetoothDevice? =
+                        data?.getParcelableExtra(CompanionDeviceManager.EXTRA_DEVICE)
+                    deviceToPair?.let { device ->
+                        if (ActivityCompat.checkSelfPermission(
+                                this,
+                                Manifest.permission.BLUETOOTH_CONNECT
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            return
+                        }
+                        //connectToDevice(device)
+                        deviceManager.startObservingDevicePresence(device.address);
+                        // Maintain continuous interaction with a paired device.
+                    }
+                }
+            }
+            else -> super.onActivityResult(requestCode, resultCode, data)
+        }
+    }
+
+    private fun isDeviceAssociated(): Boolean {
+        return sharedPreferences.getBoolean("device_associated", false)
+    }
+
+    private fun saveAssociationInfo(macAddress: MacAddress?) {
+        val editor = sharedPreferences.edit()
+        editor.putBoolean("device_associated", true)
+        editor.putString("device_mac_address", macAddress.toString())
+        editor.apply()
+    }
+
+    private fun connectToDevice(device: BluetoothDevice) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            Log.i("MyTag", "No BT connect perms")
+            return
+        }
+        bluetoothGatt = device.connectGatt(this, false, object : BluetoothGattCallback() {
+            override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+                if (newState == BluetoothAdapter.STATE_CONNECTED) {
+
+                    if (ActivityCompat.checkSelfPermission(
+                            this@MainActivity,
+                            Manifest.permission.BLUETOOTH_CONNECT
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "No Bluetooth connect permission",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return
+                    }
+
+                    NotificationHelper.sendNotification(
+                        this@MainActivity, "system", "Connected", "Connected to HM-10",
+                        3, R.drawable.ic_launcher_foreground
+                    )
+
+                    gatt.discoverServices()
+                } else if (newState == BluetoothAdapter.STATE_DISCONNECTED) {
+                    NotificationHelper.sendNotification(
+                        this@MainActivity, "system", "Disconnected", "Disconnected from HM-10",
+                        3, R.drawable.ic_launcher_foreground
+                    )
+                    // Reconnect if necessary
+                }
+            }
+
+            override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    // Handle the services discovered
+                    NotificationHelper.sendNotification(
+                        this@MainActivity, "system", "Ready", "HM-10 Ready to use",
+                        3, R.drawable.ic_launcher_foreground
+                    )
+
+                    /*val serviceUUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb")
+                    // Use the HM-10 Characteristic UUID
+                    val characteristicUUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb")
+
+                    val service = gatt.getService(serviceUUID)
+                    val characteristic = service?.getCharacteristic(characteristicUUID)
+
+                    if (characteristic != null) {
+                        // Write to the characteristic
+                        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.TIRAMISU) {
+                            val handler = Handler(Looper.getMainLooper())
+                            val delayMillis = 10000L // 1 second delay
+
+                            val runnable = object : Runnable {
+                                override fun run() {
+                                    // Your repeated task here
+                                    sendDataToCharacteristic(
+                                        gatt,
+                                        characteristic,
+                                        "Your data to send\n"
+                                    )
+
+                                    // Repeat this runnable again after the delay
+                                    handler.postDelayed(this, delayMillis)
+                                }
+                            }
+
+                            // Start the loop
+                            handler.post(runnable)
+
+                        }
+                    } else {
+                        NotificationHelper.sendNotification(
+                            this@MainActivity,
+                            "system",
+                            "Characteristic not found",
+                            "HM-10 Characteristic not found",
+                            4,
+                            R.drawable.ic_launcher_foreground
+                        )
+                    }*/
+                }
+            }
+        })
     }
 
     private fun startScanning() {
@@ -106,7 +321,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
-}
+
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
@@ -122,4 +337,5 @@ fun GreetingPreview() {
     SmartifyOSAppTheme {
         Greeting("Android")
     }
+}
 }

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.smartify_os.app"
-        minSdk = 31
+        minSdk = 33
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
