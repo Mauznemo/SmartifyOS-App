@@ -7,20 +7,52 @@ import android.util.Log
 
 class TrunkTileService : TileService() {
 
+    private val eventListener: (String) -> Unit = { event ->
+        if (event.startsWith("DEVICE_APPEARED:")) {
+            val address = event.substringAfter(":")
+            qsTile.subtitle = "Connecting ($address)"
+            qsTile.updateTile()
+        }
+        else if (event.startsWith("DEVICE_CONNECTED:")) {
+            val address = event.substringAfter(":")
+            qsTile.state = Tile.STATE_INACTIVE
+            qsTile.subtitle = "Click to open"
+            qsTile.updateTile()
+        }
+        else if (event.startsWith("DEVICE_DISCONNECTED:")) {
+            qsTile.state = Tile.STATE_UNAVAILABLE
+            qsTile.subtitle = "Disconnected"
+            qsTile.updateTile()
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        EventBus.subscribe(eventListener)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        EventBus.unsubscribe(eventListener)
+    }
     override fun onTileAdded() {
         super.onTileAdded()
         // Set the initial state of the tile
-        qsTile.state = Tile.STATE_INACTIVE
+        qsTile.state = Tile.STATE_UNAVAILABLE
         qsTile.label = "Open Trunk"
-        qsTile.subtitle = "Not connected"
-        qsTile.icon = Icon.createWithResource(this, R.drawable.ic_launcher_foreground) // Ensure this drawable exists
+        qsTile.subtitle = "Disconnected"
+        qsTile.icon = Icon.createWithResource(this, R.drawable.ic_open_trunk)
         qsTile.updateTile()
     }
 
     override fun onStartListening() {
         super.onStartListening()
-
-        qsTile.subtitle = "Not connected"
+        if(CompanionService.connected){
+            return;
+        }
+        qsTile.subtitle = "Disconnected"
+        qsTile.state = Tile.STATE_UNAVAILABLE
+        qsTile.icon = Icon.createWithResource(this, R.drawable.ic_open_trunk)
         qsTile.updateTile()
         // Update the tile state if necessary
     }
@@ -34,6 +66,7 @@ class TrunkTileService : TileService() {
         super.onClick()
         // Handle tile click
         Log.d("MyTileService", "Tile clicked!")
+        EventBus.post("SEND_MESSAGE:ut\n")
 
         // Example: Toggle the tile state
         qsTile.state = Tile.STATE_INACTIVE

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.drawable.Icon
+import android.os.Handler
+import android.os.Looper
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
@@ -26,6 +28,11 @@ class DoorsTileService : TileService() {
             qsTile.state = Tile.STATE_INACTIVE
             qsTile.subtitle = "Connected"
             qsTile.updateTile()
+
+            val handler = Handler(Looper.getMainLooper())
+            handler.postDelayed({
+                EventBus.post("SEND_MESSAGE:ds\n")
+            }, 1000)
         }
         else if (event.startsWith("DEVICE_DISCONNECTED:")) {
             qsTile.state = Tile.STATE_UNAVAILABLE
@@ -38,6 +45,7 @@ class DoorsTileService : TileService() {
                 Log.d("MyTileService", "Received Doors unlocked")
                 qsTile.label = "Unlocked"
                 qsTile.state = Tile.STATE_INACTIVE
+                qsTile.icon = Icon.createWithResource(this, R.drawable.ic_unlocked)
                 qsTile.subtitle = "Doors are unlocked"
                 qsTile.updateTile()
                 doorState = DoorState.Unlocked
@@ -45,6 +53,7 @@ class DoorsTileService : TileService() {
                 Log.d("MyTileService", "Received Doors locked")
                 qsTile.label = "Locked"
                 qsTile.state = Tile.STATE_ACTIVE
+                qsTile.icon = Icon.createWithResource(this, R.drawable.ic_locked)
                 qsTile.subtitle = "Doors are locked"
                 qsTile.updateTile()
                 doorState = DoorState.Locked
@@ -68,7 +77,7 @@ class DoorsTileService : TileService() {
         qsTile.state = Tile.STATE_UNAVAILABLE
         qsTile.label = "Unknown"
         qsTile.subtitle = "Not connected"
-        qsTile.icon = Icon.createWithResource(this, R.drawable.ic_launcher_foreground) // Ensure this drawable exists
+        qsTile.icon = Icon.createWithResource(this, R.drawable.ic_locked)
         qsTile.updateTile()
     }
 
@@ -78,7 +87,7 @@ class DoorsTileService : TileService() {
             EventBus.post("SEND_MESSAGE:ds\n") //Request door state
             return;
         }
-        qsTile.subtitle = "Not connected"
+        qsTile.subtitle = "Disconnected"
         qsTile.state = Tile.STATE_UNAVAILABLE
         qsTile.updateTile()
     }
@@ -94,6 +103,8 @@ class DoorsTileService : TileService() {
 
         // Example: Toggle the tile state
         qsTile.state = if (qsTile.state == Tile.STATE_ACTIVE) Tile.STATE_INACTIVE else Tile.STATE_ACTIVE
+        qsTile.icon = if (qsTile.state == Tile.STATE_ACTIVE) Icon.createWithResource(this, R.drawable.ic_locked)
+            else Icon.createWithResource(this, R.drawable.ic_unlocked)
         if (doorState == DoorState.Unlocked)
         {
             EventBus.post("SEND_MESSAGE:ld\n")
