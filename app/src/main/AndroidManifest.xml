@@ -58,7 +58,7 @@
         <service
             android:name=".DoorsTileService"
             android:label="Doors"
-            android:icon="@drawable/ic_launcher_foreground"
+            android:icon="@drawable/ic_locked"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
@@ -69,7 +69,18 @@
         <service
             android:name=".TrunkTileService"
             android:label="Open Trunk"
-            android:icon="@drawable/ic_launcher_foreground"
+            android:icon="@drawable/ic_open_trunk"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".AutoLockTileService"
+            android:label="Proximity Key"
+            android:icon="@drawable/ic_proximity_key"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>

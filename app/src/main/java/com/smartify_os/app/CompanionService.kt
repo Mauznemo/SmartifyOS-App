@@ -12,6 +12,7 @@ import android.companion.AssociationInfo
 import android.companion.CompanionDeviceService
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
@@ -21,6 +22,9 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 class CompanionService: CompanionDeviceService() {
@@ -52,6 +56,7 @@ class CompanionService: CompanionDeviceService() {
     }
 
     private fun connectToDevice(device: BluetoothDevice?) {
+        val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.BLUETOOTH_CONNECT
@@ -133,7 +138,18 @@ class CompanionService: CompanionDeviceService() {
                     gatt.writeDescriptor(descriptor)
 
 
+                    val handler = Handler(Looper.getMainLooper())
+                    handler.postDelayed({
+                        if(sharedPreferences.getBoolean("auto_lock_enabled", false)){
+                            sendString("al\n")
+                        }
+                    }, 1000)
 
+                    handler.postDelayed({
+                        if(sharedPreferences.getBoolean("auto_lock_enabled", false)){
+                            sendString("al\n")
+                        }
+                    }, 5000)
                     //sendString("Hello World!\n")
                 }
             }
