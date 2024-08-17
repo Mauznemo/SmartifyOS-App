@@ -89,9 +89,9 @@ class CompanionService: CompanionDeviceService() {
                         3, R.drawable.ic_launcher_foreground
                     )
 
+                    connected = true
                     EventBus.post("DEVICE_CONNECTED:${device.address}")
 
-                    connected = true
 
                     gatt.discoverServices()
                 } else if (newState == BluetoothAdapter.STATE_DISCONNECTED) {
@@ -143,13 +143,13 @@ class CompanionService: CompanionDeviceService() {
                         if(sharedPreferences.getBoolean("auto_lock_enabled", false)){
                             sendString("al\n")
                         }
-                    }, 1000)
+                    }, 300)
 
                     handler.postDelayed({
                         if(sharedPreferences.getBoolean("auto_lock_enabled", false)){
                             sendString("al\n")
                         }
-                    }, 5000)
+                    }, 1000)
                     //sendString("Hello World!\n")
                 }
             }

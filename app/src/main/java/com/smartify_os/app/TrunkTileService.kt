@@ -14,7 +14,6 @@ class TrunkTileService : TileService() {
             qsTile.updateTile()
         }
         else if (event.startsWith("DEVICE_CONNECTED:")) {
-            val address = event.substringAfter(":")
             qsTile.state = Tile.STATE_INACTIVE
             qsTile.subtitle = "Click to open"
             qsTile.updateTile()
@@ -48,6 +47,9 @@ class TrunkTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         if(CompanionService.connected){
+            qsTile.state = Tile.STATE_INACTIVE
+            qsTile.subtitle = "Click to open"
+            qsTile.updateTile()
             return;
         }
         qsTile.subtitle = "Disconnected"
