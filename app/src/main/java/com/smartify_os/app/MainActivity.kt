@@ -87,29 +87,34 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.POST_NOTIFICATIONS
             ),
             1001
         )
-        Log.i("MyTag", "Staring Scan")
-        // Start scanning for BLE devices
-        //startScanning()
-        /*
-        try {
+    }
 
-            val serviceIntent = Intent(this, BLEService::class.java)
-            this.startForegroundService(serviceIntent)
-            Log.i("MyTag", "this.startForegroundService(serviceIntent)")
-        }
-        catch (e: Exception)
-        {
-            Log.e("MyTag", e.message.toString())
-        }*/
-        if (!isDeviceAssociated()) {
-            associateBle()
-        } else {
-            // Device is already associated, handle accordingly
-        }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
+        if (requestCode == 1001) {
+            // Check if all permissions are granted
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                // All permissions granted, log the message
+                Log.i("MyTag", "Starting Scan")
+                if (!isDeviceAssociated()) {
+                    associateBle()
+                } else {
+                    // Device is already associated, handle accordingly
+                }
+            } else {
+                // Handle the case where permissions are denied
+                Log.i("MyTag", "Permissions not granted, scan cannot start")
+            }
+        }
     }
 
     private fun associateBle()
