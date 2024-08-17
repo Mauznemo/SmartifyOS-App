@@ -49,4 +49,5 @@ First have a look at the **[Contribution guidelines for this project](CONTRIBUTI
 
 ## Related projects
 **[Main Repository - SmartifyOS](https://github.com/Mauznemo/SmartifyOS)**
+
 **[Arduino BLE and Lock code - SmartMiata](https://github.com/Mauznemo/SmartMiata/blob/main/Arduino/miata-central-lock-controller/miata-central-lock-controller.ino)**
