@@ -100,6 +100,9 @@ class BLEService : Service() {
                 }
             }
         }
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
         bluetoothLeScanner.startScan(leScanCallback)
     }
 
