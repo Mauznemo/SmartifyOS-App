@@ -1,5 +1,8 @@
 # SmartifyOS App
 
+>[!WARNING]
+>This is the old native Android app without any in-app UI, the new app made with flutter can be found [here](https://github.com/Mauznemo/SmartifyOS-companion-app).
+
 >[!CAUTION]
 >**Disclaimer:** This software is currently in the development phase and is intended for developers. It is not suitable for general use in vehicles yet.
 
