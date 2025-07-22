@@ -1,7 +1,7 @@
 # SmartifyOS App
 
 >[!WARNING]
->This is the old native Android app without any in-app UI, the new app made with flutter can be found [here](https://github.com/Mauznemo/SmartifyOS-companion-app).
+>This is the old native Android app without any in-app UI, the new app made with flutter can be found [here](https://github.com/Mauznemo/OpenCarKey).
 
 ## About
 
